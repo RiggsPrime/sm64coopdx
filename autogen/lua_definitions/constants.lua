@@ -2,78 +2,6 @@
 
 math.randomseed(get_time())
 
-
---------------
--- CObjects --
---------------
-
-_CObjectPool = {}
-
-_CObject = {
-    __index = function (t,k)
-        return _get_field(t['_lot'], t['_pointer'], k, t)
-    end,
-    __newindex = function (t,k,v)
-        _set_field(t['_lot'], t['_pointer'], k, v, t)
-    end,
-    __tostring = function(t)
-        return 'CObject: ' .. t['_lot'] .. ', [' .. string.format('0x%08X', t['_pointer']) .. ']'
-    end,
-    __eq = function (a, b)
-        return a['_pointer'] == b['_pointer'] and a['_lot'] == b['_lot'] and a['_pointer'] ~= nil and a['_lot'] ~= nil
-    end
-}
-
-function _NewCObject(lot, pointer)
-    if _CObjectPool[lot] == nil then
-        _CObjectPool[lot] = {}
-    end
-
-    if _CObjectPool[lot][pointer] == nil then
-        local obj = {}
-        rawset(obj, '_pointer', pointer)
-        rawset(obj, '_lot', lot)
-        setmetatable(obj, _CObject)
-        _CObjectPool[lot][pointer] = obj
-        return obj
-    end
-
-    return _CObjectPool[lot][pointer]
-end
-
-local _CPointerPool = {}
-
-_CPointer = {
-    __index = function (t,k)
-        return nil
-    end,
-    __newindex = function (t,k,v)
-    end,
-    __tostring = function(t)
-        return 'CPointer: ' .. t['_lvt'] .. ', [' .. string.format('0x%08X', t['_pointer']) .. ']'
-    end,
-    __eq = function (a, b)
-        return a['_pointer'] == b['_pointer'] and a['_pointer'] ~= nil and a['_lvt'] ~= nil
-    end
-}
-
-function _NewCPointer(lvt, pointer)
-    if _CPointerPool[lvt] == nil then
-        _CPointerPool[lvt] = {}
-    end
-
-    if _CPointerPool[lvt][pointer] == nil then
-        local obj = {}
-        rawset(obj, '_pointer', pointer)
-        rawset(obj, '_lvt', lvt)
-        setmetatable(obj, _CPointer)
-        _CPointerPool[lvt][pointer] = obj
-        return obj
-    end
-
-    return _CPointerPool[lvt][pointer]
-end
-
 _SyncTable = {
     __index = function (t,k)
         local _table = rawget(t, '_table')
@@ -267,54 +195,6 @@ function vec3s_dist(v1, v2)
     return math.sqrt(dx * dx + dy * dy + dz * dz)
 end
 
---- @param current number
---- @param target number
---- @param inc number
---- @param dec number
---- @return number
-function approach_f32(current, target, inc, dec)
-    if current < target then
-        current = current + inc
-        if current > target then
-            current = target
-        end
-    else
-        current = current - dec
-        if current < target then
-            current = target
-        end
-    end
-    return current
-end
-
---- @param current integer
---- @param target integer
---- @param inc integer
---- @param dec integer
---- @return integer
-function approach_s32(current, target, inc, dec)
-    if current < target then
-        current = current + inc
-        if current > target then
-            current = target
-        end
-    else
-        current = current - dec
-        if current < target then
-            current = target
-        end
-    end
-
-    -- keep within 32 bits
-    if current > 2147483647 then
-        current = -2147483648 + (current - 2147483647)
-    elseif current < -2147483648 then
-        current = 2147483647 + (current - (-2147483648))
-    end
-    return current
-end
-
-
 -----------
 -- sound --
 -----------
@@ -405,6 +285,7 @@ COURSE_MIN = 1
 --- @param np NetworkPlayer
 --- @param part PlayerPart
 --- @return Color
+--- Gets the palette color of `part` on `np`
 function network_player_get_palette_color(np, part)
     local color = {
         r = network_player_get_palette_color_channel(np, part, 0),
@@ -417,6 +298,7 @@ end
 --- @param np NetworkPlayer
 --- @param part PlayerPart
 --- @return Color
+--- Gets the override palette color of `part` on `np`
 function network_player_get_override_palette_color(np, part)
     local color = {
         r = network_player_get_override_palette_color_channel(np, part, 0),
@@ -441,6 +323,9 @@ INSTANT_WARP_INDEX_STOP = 0x04
 
 --- @type integer
 MAX_AREAS = 16
+
+--- @type string
+VERSION_REGION = "US"
 
 --- @type integer
 WARP_TRANSITION_FADE_FROM_BOWSER = 0x12
@@ -3349,7 +3234,10 @@ FONT_CUSTOM_HUD = 4
 FONT_RECOLOR_HUD = 5
 
 --- @type DjuiFontType
-FONT_COUNT = 6
+FONT_SPECIAL = 6
+
+--- @type DjuiFontType
+FONT_COUNT = 7
 
 --- @class HudUtilsFilter
 
@@ -3372,6 +3260,20 @@ RESOLUTION_N64 = 1
 
 --- @type HudUtilsResolution
 RESOLUTION_COUNT = 2
+
+--- @class DjuiRainbowColor
+
+--- @type DjuiRainbowColor
+DJUI_RAINBOW_COLOR_RED = 0
+
+--- @type DjuiRainbowColor
+DJUI_RAINBOW_COLOR_GREEN = 1
+
+--- @type DjuiRainbowColor
+DJUI_RAINBOW_COLOR_BLUE = 2
+
+--- @type DjuiRainbowColor
+DJUI_RAINBOW_COLOR_YELLOW = 3
 
 --- @type integer
 ENVFX_BUBBLE_START = 10
@@ -3747,6 +3649,15 @@ INT_SUBTYPE_STAR_DOOR = 0x00000020
 --- @type integer
 INT_SUBTYPE_TWIRL_BOUNCE = 0x00000080
 
+--- @type integer
+PVP_ATTACK_KNOCKBACK_TIMER_DEFAULT = 10
+
+--- @type integer
+PVP_ATTACK_KNOCKBACK_TIMER_OVERRIDE = -5
+
+--- @type integer
+PVP_ATTACK_OVERRIDE_VANILLA_INVINCIBILITY = 0x0000FFFF
+
 --- @class InteractionFlag
 
 --- @type InteractionFlag
@@ -3778,6 +3689,9 @@ INT_TWIRL = (1 << 8)
 
 --- @type InteractionFlag
 INT_GROUND_POUND_OR_TWIRL = (INT_GROUND_POUND | INT_TWIRL)
+
+--- @type InteractionFlag
+INT_LUA = (1 << 31)
 
 --- @class InteractionType
 
@@ -3876,6 +3790,9 @@ INTERACT_IGLOO_BARRIER = (1 << 30)
 
 --- @type InteractionType
 INTERACT_PLAYER = (1 << 31)
+
+--- @type integer
+MAX_LOCAL_STATE_HISTORY = 30
 
 --- @type integer
 WARP_CHECKPOINT = 0x80
@@ -4004,54 +3921,6 @@ LEVEL_UNKNOWN_38 = 38
 
 --- @type LevelNum
 LEVEL_COUNT = 39
-
---- @type integer
-MARIO_SPAWN_AIRBORNE = 0x12
-
---- @type integer
-MARIO_SPAWN_AIRBORNE_DEATH = 0x23
-
---- @type integer
-MARIO_SPAWN_AIRBORNE_STAR_COLLECT = 0x22
-
---- @type integer
-MARIO_SPAWN_DEATH = 0x15
-
---- @type integer
-MARIO_SPAWN_DOOR_WARP = 0x01
-
---- @type integer
-MARIO_SPAWN_FLYING = 0x17
-
---- @type integer
-MARIO_SPAWN_HARD_AIR_KNOCKBACK = 0x13
-
---- @type integer
-MARIO_SPAWN_INSTANT_ACTIVE = 0x10
-
---- @type integer
-MARIO_SPAWN_LAUNCH_DEATH = 0x25
-
---- @type integer
-MARIO_SPAWN_LAUNCH_STAR_COLLECT = 0x24
-
---- @type integer
-MARIO_SPAWN_PAINTING_DEATH = 0x21
-
---- @type integer
-MARIO_SPAWN_PAINTING_STAR_COLLECT = 0x20
-
---- @type integer
-MARIO_SPAWN_SPIN_AIRBORNE = 0x16
-
---- @type integer
-MARIO_SPAWN_SPIN_AIRBORNE_CIRCLE = 0x14
-
---- @type integer
-MARIO_SPAWN_SWIMMING = 0x11
-
---- @type integer
-MARIO_SPAWN_TELEPORT = 0x04
 
 --- @type integer
 MARIO_SPAWN_UNKNOWN_02 = 0x02
@@ -4228,6 +4097,71 @@ HUD_DISPLAY_NONE = 0x0000
 
 --- @type HUDDisplayFlag
 HUD_DISPLAY_DEFAULT = HUD_DISPLAY_FLAG_LIVES | HUD_DISPLAY_FLAG_COIN_COUNT | HUD_DISPLAY_FLAG_STAR_COUNT | HUD_DISPLAY_FLAG_CAMERA_AND_POWER | HUD_DISPLAY_FLAG_CAMERA | HUD_DISPLAY_FLAG_POWER | HUD_DISPLAY_FLAG_KEYS | HUD_DISPLAY_FLAG_UNKNOWN_0020
+
+--- @class MarioSpawnType
+
+--- @type MarioSpawnType
+MARIO_SPAWN_NONE = 0
+
+--- @type MarioSpawnType
+MARIO_SPAWN_DOOR_WARP = 1
+
+--- @type MarioSpawnType
+MARIO_SPAWN_IDLE = 2
+
+--- @type MarioSpawnType
+MARIO_SPAWN_PIPE = 3
+
+--- @type MarioSpawnType
+MARIO_SPAWN_TELEPORT = 4
+
+--- @type MarioSpawnType
+MARIO_SPAWN_INSTANT_ACTIVE = 0x10
+
+--- @type MarioSpawnType
+MARIO_SPAWN_SWIMMING = ((MARIO_SPAWN_INSTANT_ACTIVE ) + 1)
+
+--- @type MarioSpawnType
+MARIO_SPAWN_AIRBORNE = ((MARIO_SPAWN_INSTANT_ACTIVE ) + 2)
+
+--- @type MarioSpawnType
+MARIO_SPAWN_HARD_AIR_KNOCKBACK = ((MARIO_SPAWN_INSTANT_ACTIVE ) + 3)
+
+--- @type MarioSpawnType
+MARIO_SPAWN_SPIN_AIRBORNE_CIRCLE = ((MARIO_SPAWN_INSTANT_ACTIVE ) + 4)
+
+--- @type MarioSpawnType
+MARIO_SPAWN_DEATH = ((MARIO_SPAWN_INSTANT_ACTIVE ) + 5)
+
+--- @type MarioSpawnType
+MARIO_SPAWN_SPIN_AIRBORNE = ((MARIO_SPAWN_INSTANT_ACTIVE ) + 6)
+
+--- @type MarioSpawnType
+MARIO_SPAWN_FLYING = ((MARIO_SPAWN_INSTANT_ACTIVE ) + 7)
+
+--- @type MarioSpawnType
+MARIO_SPAWN_PAINTING_STAR_COLLECT = 0x20
+
+--- @type MarioSpawnType
+MARIO_SPAWN_PAINTING_DEATH = ((MARIO_SPAWN_PAINTING_STAR_COLLECT ) + 1)
+
+--- @type MarioSpawnType
+MARIO_SPAWN_AIRBORNE_STAR_COLLECT = ((MARIO_SPAWN_PAINTING_STAR_COLLECT ) + 2)
+
+--- @type MarioSpawnType
+MARIO_SPAWN_AIRBORNE_DEATH = ((MARIO_SPAWN_PAINTING_STAR_COLLECT ) + 3)
+
+--- @type MarioSpawnType
+MARIO_SPAWN_LAUNCH_STAR_COLLECT = ((MARIO_SPAWN_PAINTING_STAR_COLLECT ) + 4)
+
+--- @type MarioSpawnType
+MARIO_SPAWN_LAUNCH_DEATH = ((MARIO_SPAWN_PAINTING_STAR_COLLECT ) + 5)
+
+--- @type MarioSpawnType
+MARIO_SPAWN_UNUSED_38 = ((MARIO_SPAWN_PAINTING_STAR_COLLECT ) + 6)
+
+--- @type MarioSpawnType
+MARIO_SPAWN_FADE_FROM_BLACK = ((MARIO_SPAWN_PAINTING_STAR_COLLECT ) + 7)
 
 --- @class CharacterAnimID
 
@@ -5568,10 +5502,10 @@ MARIO_HAND_HOLDING_WING_CAP = 4
 MARIO_HAND_RIGHT_OPEN = 5
 
 --- @type integer
-MAX_KEYS = 512
+MAX_KEYS = 4096
 
 --- @type integer
-MAX_KEY_VALUE_LENGTH = 256
+MAX_KEY_VALUE_LENGTH = 1024
 
 --- @type integer
 PACKET_LENGTH = 3000
@@ -5617,6 +5551,14 @@ PLAYER_INTERACTIONS_SOLID = 1
 
 --- @type PlayerInteractions
 PLAYER_INTERACTIONS_PVP = 2
+
+--- @class PvpType
+
+--- @type PvpType
+PLAYER_PVP_CLASSIC = 0
+
+--- @type PvpType
+PLAYER_PVP_REVAMPED = 1
 
 --- @type integer
 MAX_DESCRIPTION_STRING = 20
@@ -9230,7 +9172,28 @@ HOOK_ON_LANGUAGE_CHANGED = 44
 HOOK_ON_MODS_LOADED = 45
 
 --- @type LuaHookedEventType
-HOOK_MAX = 46
+HOOK_ON_NAMETAGS_RENDER = 46
+
+--- @type LuaHookedEventType
+HOOK_ON_DJUI_THEME_CHANGED = 47
+
+--- @type LuaHookedEventType
+HOOK_ON_GEO_PROCESS = 48
+
+--- @type LuaHookedEventType
+HOOK_BEFORE_GEO_PROCESS = 49
+
+--- @type LuaHookedEventType
+HOOK_ON_GEO_PROCESS_CHILDREN = 50
+
+--- @type LuaHookedEventType
+HOOK_MARIO_OVERRIDE_GEOMETRY_INPUTS = 51
+
+--- @type LuaHookedEventType
+HOOK_ON_INTERACTIONS = 52
+
+--- @type LuaHookedEventType
+HOOK_MAX = 53
 
 --- @class LuaModMenuElementType
 
@@ -12557,25 +12520,13 @@ SPTASK_STATE_FINISHED_DP = 4
 MAX_VERSION_LENGTH = 32
 
 --- @type integer
-MINOR_VERSION_NUMBER = 2
+MINOR_VERSION_NUMBER = 1
 
 --- @type string
-SM64COOPDX_VERSION = "v1.0.3"
+SM64COOPDX_VERSION = "v1.2.1"
 
 --- @type integer
-VERSION_NUMBER = 37
-
---- @type string
-VERSION_REGION = "JP"
-
---- @type string
-VERSION_REGION = "EU"
-
---- @type string
-VERSION_REGION = "SH"
-
---- @type string
-VERSION_REGION = "US"
+VERSION_NUMBER = 38
 
 --- @type string
 VERSION_TEXT = "v"

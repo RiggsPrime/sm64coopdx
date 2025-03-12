@@ -122,26 +122,28 @@ s16 newcam_saved_defmode = -1;
 extern bool gDjuiInMainMenu;
 
 ///This is called at every level initialisation.
-void newcam_init(struct Camera *c, UNUSED u8 dv) {
+void newcam_init(struct Camera *c, u8 isSoftReset) {
     newcam_tilt = 1500;
     newcam_yaw = -c->yaw+0x4000; //Mario and the camera's yaw have this offset between them.
     newcam_mode = NC_MODE_NORMAL;
     ///This here will dictate what modes the camera will start in at the beginning of a level. Below are some examples.
-    switch (gCurrLevelNum) {
-        case LEVEL_BITDW: newcam_yaw = 0x4000; /*newcam_mode = NC_MODE_8D;*/ newcam_tilt = 4000; break;
-        case LEVEL_BITFS: newcam_yaw = 0x4000; /*newcam_mode = NC_MODE_8D;*/ newcam_tilt = 4000; break;
-        case LEVEL_BITS: newcam_yaw = 0x4000; /*newcam_mode = NC_MODE_8D;*/ newcam_tilt = 4000; break;
-        case LEVEL_WF: newcam_yaw = 0x4000; newcam_tilt = 2000; break;
-        case LEVEL_RR: newcam_yaw = 0x6000; newcam_tilt = 2000; break;
-        case LEVEL_CCM: if (gCurrAreaIndex == 1) {newcam_yaw = -0x4000; newcam_tilt = 2000; } else newcam_mode = NC_MODE_SLIDE; break;
-        case LEVEL_WDW: newcam_yaw = 0x2000; newcam_tilt = 3000; break;
-        case 27: newcam_mode = NC_MODE_SLIDE; break;
-        case LEVEL_TTM: if (gCurrAreaIndex == 2) newcam_mode = NC_MODE_SLIDE; break;
-    }
+    if (!isSoftReset) {
+        switch (gCurrLevelNum) {
+            case LEVEL_BITDW: newcam_yaw = 0x4000; /*newcam_mode = NC_MODE_8D;*/ newcam_tilt = 4000; break;
+            case LEVEL_BITFS: newcam_yaw = 0x4000; /*newcam_mode = NC_MODE_8D;*/ newcam_tilt = 4000; break;
+            case LEVEL_BITS: newcam_yaw = 0x4000; /*newcam_mode = NC_MODE_8D;*/ newcam_tilt = 4000; break;
+            case LEVEL_WF: newcam_yaw = 0x4000; newcam_tilt = 2000; break;
+            case LEVEL_RR: newcam_yaw = 0x6000; newcam_tilt = 2000; break;
+            case LEVEL_CCM: if (gCurrAreaIndex == 1) {newcam_yaw = -0x4000; newcam_tilt = 2000; } else newcam_mode = NC_MODE_SLIDE; break;
+            case LEVEL_WDW: newcam_yaw = 0x2000; newcam_tilt = 3000; break;
+            case 27: newcam_mode = NC_MODE_SLIDE; break;
+            case LEVEL_TTM: if (gCurrAreaIndex == 2) newcam_mode = NC_MODE_SLIDE; break;
+        }
 
-    // clear these out when entering a new level to prevent "camera mode buffering"
-    newcam_saved_defmode = -1;
-    newcam_saved_mode = -1;
+        // clear these out when entering a new level to prevent "camera mode buffering"
+        newcam_saved_defmode = -1;
+        newcam_saved_mode = -1;
+    }
 
     // this will be set in init_settings() if enabled
     newcam_active = 0;
@@ -459,15 +461,15 @@ static void newcam_update_values(void) {
 
     if (newcam_modeflags & NC_FLAG_XTURN)
         newcam_yaw -= ((newcam_yaw_acc*(newcam_sensitivityX/10))*ivrt(0));
-    if (((newcam_tilt <= 15000) && (newcam_tilt >= -15000)) && newcam_modeflags & NC_FLAG_YTURN)
+    if (((newcam_tilt <= 0x3000) && (newcam_tilt >= -0x3000)) && newcam_modeflags & NC_FLAG_YTURN)
         newcam_tilt += ((newcam_tilt_acc*ivrt(1))*(newcam_sensitivityY/10));
 
-    if (newcam_tilt > 15000)
-        newcam_tilt = 15000;
-    if (newcam_tilt < -15000 && gMarioStates[0].pos[1] - gMarioStates[0].floorHeight > 20)
-        newcam_tilt = -15000;
-    if (newcam_tilt < -12000 && gMarioStates[0].pos[1] - gMarioStates[0].floorHeight < 20)
-        newcam_tilt = -12000;
+    if (newcam_tilt > 0x3000)
+        newcam_tilt = 0x3000;
+    if (newcam_tilt < -0x3000 && gMarioStates[0].pos[1] - gMarioStates[0].floorHeight > 20)
+        newcam_tilt = -0x3000;
+    if (newcam_tilt < -0x3000 && gMarioStates[0].pos[1] - gMarioStates[0].floorHeight < 20)
+        newcam_tilt = -0x3000;
 
     if (newcam_turnwait > 0 && gMarioStates[0].vel[1] == 0) {
         newcam_turnwait -= 1;

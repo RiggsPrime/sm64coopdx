@@ -45,7 +45,7 @@ COOPNET ?= 1
 # Enable docker build workarounds
 DOCKERBUILD ?= 0
 # Sets your optimization level for building.
-# A choose is chosen by default for you.
+# A choice is made by default for you.
 OPT_LEVEL ?= -1
 # Enable compiling with more debug info.
 DEBUG_INFO_LEVEL ?= 2
@@ -66,8 +66,6 @@ ifeq ($(shell arch),arm64)
 else
   MIN_MACOS_VERSION ?= 10.15
 endif
-# Homebrew Prefix
-BREW_PREFIX ?= $(shell brew --prefix)
 # Make some small adjustments for handheld devices
 HANDHELD ?= 0
 
@@ -122,6 +120,22 @@ endif
 
 ifeq ($(HOST_OS),Darwin)
   OSX_BUILD := 1
+
+  ifndef BREW_PREFIX
+    BREW_PREFIX := $(shell brew --prefix)
+  endif
+endif
+
+ifeq ($(HOST_OS),Linux)
+  machine = $(shell sh -c 'uname -m 2>/dev/null || echo unknown')
+  ifneq (,$(findstring aarch64,$(machine)))
+    #Raspberry Pi 4-5
+    TARGET_RPI = 1
+  endif
+  ifneq (,$(findstring arm,$(machine)))
+    #Rasberry Pi zero, 2, 3, etc
+    TARGET_RPI = 1
+  endif
 endif
 
 # MXE overrides
@@ -270,8 +284,6 @@ endif
 ifeq ($(TARGET_RPI),1)
   $(info Compiling for Raspberry Pi)
   DISCORD_SDK := 0
-  COOPNET := 0
-	machine = $(shell sh -c 'uname -m 2>/dev/null || echo unknown')
 
     # Raspberry Pi B+, Zero, etc
 	ifneq (,$(findstring armv6l,$(machine)))
@@ -867,6 +879,7 @@ ifeq ($(WINDOWS_BUILD),1)
   ifeq ($(CROSS),)
     LDFLAGS += -no-pie
   endif
+  LDFLAGS += -T windows.ld
 else ifeq ($(TARGET_RPI),1)
   LDFLAGS := $(OPT_FLAGS) -lm $(BACKEND_LDFLAGS) -no-pie
 else ifeq ($(OSX_BUILD),1)
@@ -947,9 +960,9 @@ COOPNET_LIBS :=
 ifeq ($(COOPNET),1)
   ifeq ($(WINDOWS_BUILD),1)
     ifeq ($(TARGET_BITS), 32)
-      LDFLAGS += -Llib/coopnet/win32 -l:libcoopnet.a -l:libjuice.a -lbcrypt -lws2_32 -liphlpapi
+      LDFLAGS += -Llib/coopnet/win32 -l:libcoopnet.a -l:libjuice.a -lbcrypt -liphlpapi
     else
-      LDFLAGS += -Llib/coopnet/win64 -l:libcoopnet.a -l:libjuice.a -lbcrypt -lws2_32 -liphlpapi
+      LDFLAGS += -Llib/coopnet/win64 -l:libcoopnet.a -l:libjuice.a -lbcrypt -liphlpapi
     endif
   else ifeq ($(OSX_BUILD),1)
     ifeq ($(shell uname -m),arm64)
@@ -963,9 +976,9 @@ ifeq ($(COOPNET),1)
     endif
   else ifeq ($(TARGET_RPI),1)
     ifneq (,$(findstring aarch64,$(machine)))
-      LDFLAGS += -Llib/coopnet/linux -l:libcoopnet-arm64.a -l:libjuice.a
+      LDFLAGS += -Llib/coopnet/linux -l:libcoopnet-arm64.a -l:libjuice-arm64.a
     else
-      LDFLAGS += -Llib/coopnet/linux -l:libcoopnet-arm.a -l:libjuice.a
+      LDFLAGS += -Llib/coopnet/linux -l:libcoopnet-arm.a -l:libjuice-arm.a
     endif
   else
     LDFLAGS += -Llib/coopnet/linux -l:libcoopnet.a -l:libjuice.a
@@ -974,7 +987,7 @@ endif
 
 # Network/Discord (ugh, needs cleanup)
 ifeq ($(WINDOWS_BUILD),1)
-  LDFLAGS += -L"ws2_32" -lwsock32
+  LDFLAGS += -lws2_32 -lwsock32
   ifeq ($(DISCORD_SDK),1)
     LDFLAGS += -Wl,-Bdynamic -L./lib/discordsdk/ -ldiscord_game_sdk -Wl,-Bstatic
   endif
@@ -983,6 +996,17 @@ else
     LDFLAGS += -ldiscord_game_sdk -Wl,-rpath . -Wl,-rpath lib/discordsdk
   endif
 endif
+
+IS_DEV_OR_DEBUG := $(or $(filter 1,$(DEVELOPMENT)),$(filter 1,$(DEBUG)),0)
+ifeq ($(IS_DEV_OR_DEBUG),0)
+  CFLAGS += -fno-ident -fno-common -ffile-prefix-map="$(PWD)"=. -D__DATE__="\"\"" -D__TIME__="\"\"" -Wno-builtin-macro-redefined
+  ifeq ($(OSX_BUILD),0)
+    LDFLAGS += -Wl,--build-id=none
+  endif
+endif
+
+# Enable ASLR
+CFLAGS += -fPIE
 
 # Prevent a crash with -sopt
 export LANG := C
@@ -1131,8 +1155,15 @@ endef
 all: $(EXE)
 
 ifeq ($(WINDOWS_BUILD),1)
+MAPFILE = $(BUILD_DIR)/coop.map
 exemap: $(EXE)
-	$(V)$(OBJDUMP) -t $(EXE) > $(BUILD_DIR)/coop.map
+	@$(PRINT) "$(GREEN)Creating map file: $(BLUE)$(MAPFILE) $(NO_COL)\n"
+	$(V)$(OBJDUMP) -t $(EXE) > $(MAPFILE)
+	@cp $(EXE) $(EXE).bak && cp $(MAPFILE) $(MAPFILE).bak
+	$(V)$(PYTHON) $(TOOLS_DIR)/clean_mapfile.py $(EXE) $(MAPFILE)
+ifeq ($(IS_DEV_OR_DEBUG),0)
+	$(V)$(OBJCOPY) -p --strip-unneeded $(EXE)
+endif
 all: exemap
 endif
 
@@ -1327,9 +1358,6 @@ $(SOUND_BIN_DIR)/tbl_header: $(SOUND_BIN_DIR)/sound_data.ctl
 $(SOUND_BIN_DIR)/samples_offsets.inc.c: $(SOUND_BIN_DIR)/sound_data.ctl
 	@true
 
-$(SOUND_BIN_DIR)/sequences_offsets.inc.c: $(SOUND_BIN_DIR)/sound_data.ctl
-	@true
-
 $(SOUND_BIN_DIR)/sequences.bin: $(SOUND_BANK_FILES) sound/sequences.json $(SOUND_SEQUENCE_DIRS) $(SOUND_SEQUENCE_FILES) $(ENDIAN_BITWIDTH)
 	@$(PRINT) "$(GREEN)Generating:  $(BLUE)$@ $(NO_COL)\n"
 	$(V)$(PYTHON) $(TOOLS_DIR)/assemble_sound.py --sequences $@ $(SOUND_BIN_DIR)/sequences_header $(SOUND_BIN_DIR)/bank_sets sound/sound_banks/ sound/sequences.json $(SOUND_SEQUENCE_FILES) $(C_DEFINES) $$(cat $(ENDIAN_BITWIDTH))
@@ -1338,6 +1366,9 @@ $(SOUND_BIN_DIR)/bank_sets: $(SOUND_BIN_DIR)/sequences.bin
 	@true
 
 $(SOUND_BIN_DIR)/sequences_header: $(SOUND_BIN_DIR)/sequences.bin
+	@true
+
+$(SOUND_BIN_DIR)/sequences_offsets.inc.c: $(SOUND_BIN_DIR)/sequences.bin
 	@true
 
 $(SOUND_BIN_DIR)/%.m64: $(SOUND_BIN_DIR)/%.o

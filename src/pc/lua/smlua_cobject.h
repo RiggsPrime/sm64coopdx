@@ -39,24 +39,14 @@ enum LuaValueType {
     LVT_MAX,
 };
 
-enum LuaObjectType {
-    LOT_NONE = 0,
-    LOT_VEC3S,
-    LOT_VEC3F,
-    LOT_VEC4S,
-    LOT_VEC4F,
-    LOT_MAT4,
-    LOT_COLOR,
-    LOT_POINTER,
-    LOT_MAX,
-};
-
 struct LuaObjectField {
     const char* key;
     enum LuaValueType valueType;
     size_t valueOffset;
     bool immutable;
     u16 lot;
+    u16 count;
+    u32 size;
 };
 
 struct LuaObjectTable {
@@ -64,6 +54,23 @@ struct LuaObjectTable {
     struct LuaObjectField* fields;
     u16 fieldCount;
 };
+
+typedef struct {
+    void *pointer;
+    u16 lot;
+    bool freed;
+} CObject;
+
+typedef struct {
+    void *pointer;
+    u16 lvt;
+    bool freed;
+} CPointer;
+
+extern int gSmLuaCObjects;
+extern int gSmLuaCPointers;
+extern int gSmLuaCObjectMetatable;
+extern int gSmLuaCPointerMetatable;
 
 bool smlua_valid_lot(u16 lot);
 bool smlua_valid_lvt(u16 lvt);

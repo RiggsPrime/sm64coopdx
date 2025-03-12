@@ -6,6 +6,7 @@
 #include "PR/gbi.h"
 
 float smoothstep(float edge0, float edge1, float x);
+/* |description|Updates every Mario state's star count with the save file total star count|descriptionEnd| */
 void update_all_mario_stars(void);
 
 f32 clock_elapsed(void);
@@ -24,5 +25,6 @@ void delta_interpolate_mtx(Mtx* out, Mtx* a, Mtx* b, f32 delta);
 void detect_and_skip_mtx_interpolation(Mtx** mtxPrev, Mtx** mtx);
 
 void str_seperator_concat(char *output_buffer, int buffer_size, char** strings, int num_strings, char* seperator);
+char *str_remove_color_codes(const char *str);
 
 #endif

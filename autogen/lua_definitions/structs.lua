@@ -31,6 +31,7 @@
 
 --- @class Area
 --- @field public camera Camera
+--- @field public dialog Array_integer
 --- @field public flags integer
 --- @field public index integer
 --- @field public instantWarps InstantWarp
@@ -48,6 +49,7 @@
 --- @field public terrainData Pointer_integer
 --- @field public terrainType integer
 --- @field public warpNodes ObjectWarpNode
+--- @field public whirlpools Array_Whirlpool
 
 --- @class BehaviorDialogs
 --- @field public BobombBuddyBob1Dialog DialogId
@@ -216,6 +218,8 @@
 --- @field public cutscene integer
 --- @field public defMode integer
 --- @field public doorStatus integer
+--- @field public filler31 Array_integer
+--- @field public filler3C Array_integer
 --- @field public focus Vec3f
 --- @field public mode integer
 --- @field public mtx Mat4
@@ -237,6 +241,7 @@
 
 --- @class CameraOverride
 --- @field public override boolean
+--- @field public value integer
 
 --- @class CameraStoredInfo
 --- @field public cannonYOffset number
@@ -537,6 +542,7 @@
 --- @class Controller
 --- @field public buttonDown integer
 --- @field public buttonPressed integer
+--- @field public buttonReleased integer
 --- @field public extStickX integer
 --- @field public extStickY integer
 --- @field public port integer
@@ -583,11 +589,45 @@
 --- @field public second integer
 --- @field public year integer
 
+--- @class DisplayListNode
+--- @field public next DisplayListNode
+--- @field public usingCamSpace integer
+
 --- @class DjuiColor
 --- @field public a integer
 --- @field public b integer
 --- @field public g integer
 --- @field public r integer
+
+--- @class DjuiInteractableTheme
+--- @field public cursorDownBorderColor DjuiColor
+--- @field public cursorDownRectColor DjuiColor
+--- @field public defaultBorderColor DjuiColor
+--- @field public defaultRectColor DjuiColor
+--- @field public hoveredBorderColor DjuiColor
+--- @field public hoveredRectColor DjuiColor
+--- @field public textColor DjuiColor
+
+--- @class DjuiPanelTheme
+--- @field public hudFontHeader boolean
+
+--- @class DjuiTheme
+--- @field public id string
+--- @field public interactables DjuiInteractableTheme
+--- @field public name string
+--- @field public panels DjuiPanelTheme
+--- @field public threePanels DjuiThreePanelTheme
+
+--- @class DjuiThreePanelTheme
+--- @field public borderColor DjuiColor
+--- @field public rectColor DjuiColor
+
+--- @class ExclamationBoxContent
+--- @field public behavior BehaviorId
+--- @field public firstByte integer
+--- @field public id integer
+--- @field public model ModelExtendedId
+--- @field public unused integer
 
 --- @class FirstPersonCamera
 --- @field public centerL boolean
@@ -606,6 +646,10 @@
 --- @field public normalY number
 --- @field public normalZ number
 --- @field public originOffset number
+--- @field public unused Array_number
+
+--- @class FnGraphNode
+--- @field public node GraphNode
 
 --- @class GlobalObjectAnimations
 --- @field public amp_seg8_anims_08004034 Pointer_ObjectAnimPointer
@@ -788,10 +832,67 @@
 --- @field public children GraphNode
 --- @field public extraFlags integer
 --- @field public flags integer
+--- @field public hookProcess integer
 --- @field public next GraphNode
 --- @field public parent GraphNode
 --- @field public prev GraphNode
 --- @field public type integer
+
+--- @class GraphNodeAnimatedPart
+--- @field public node GraphNode
+--- @field public translation Vec3s
+
+--- @class GraphNodeBackground
+--- @field public background integer
+--- @field public fnNode FnGraphNode
+--- @field public prevCameraFocus Vec3f
+--- @field public prevCameraPos Vec3f
+--- @field public prevCameraTimestamp integer
+--- @field public unused integer
+
+--- @class GraphNodeBillboard
+--- @field public node GraphNode
+--- @field public translation Vec3s
+
+--- @class GraphNodeCamera
+--- @field public fnNode FnGraphNode
+--- @field public focus Vec3f
+--- @field public matrixPtr Pointer_Mat4
+--- @field public matrixPtrPrev Pointer_Mat4
+--- @field public pos Vec3f
+--- @field public prevFocus Vec3f
+--- @field public prevPos Vec3f
+--- @field public prevTimestamp integer
+--- @field public roll integer
+--- @field public rollScreen integer
+
+--- @class GraphNodeCullingRadius
+--- @field public cullingRadius integer
+--- @field public node GraphNode
+--- @field public pad1E Array_integer
+
+--- @class GraphNodeDisplayList
+--- @field public node GraphNode
+
+--- @class GraphNodeGenerated
+--- @field public fnNode FnGraphNode
+--- @field public parameter integer
+
+--- @class GraphNodeHeldObject
+--- @field public fnNode FnGraphNode
+--- @field public objNode Object
+--- @field public playerIndex integer
+--- @field public prevShadowPos Vec3f
+--- @field public prevShadowPosTimestamp integer
+--- @field public translation Vec3s
+
+--- @class GraphNodeLevelOfDetail
+--- @field public maxDistance integer
+--- @field public minDistance integer
+--- @field public node GraphNode
+
+--- @class GraphNodeMasterList
+--- @field public node GraphNode
 
 --- @class GraphNodeObject
 --- @field public activeAreaIndex integer
@@ -821,6 +922,59 @@
 --- @field public throwMatrix Pointer_Mat4
 --- @field public throwMatrixPrev Pointer_Mat4
 --- @field public unk4C SpawnInfo
+
+--- @class GraphNodeObjectParent
+--- @field public node GraphNode
+--- @field public sharedChild GraphNode
+
+--- @class GraphNodeOrthoProjection
+--- @field public node GraphNode
+--- @field public scale number
+
+--- @class GraphNodePerspective
+--- @field public far integer
+--- @field public fnNode FnGraphNode
+--- @field public fov number
+--- @field public near integer
+--- @field public prevFov number
+--- @field public prevTimestamp number
+--- @field public unused integer
+
+--- @class GraphNodeRotation
+--- @field public node GraphNode
+--- @field public prevRotation Vec3s
+--- @field public prevTimestamp integer
+--- @field public rotation Vec3s
+
+--- @class GraphNodeScale
+--- @field public node GraphNode
+--- @field public prevScale number
+--- @field public scale number
+
+--- @class GraphNodeShadow
+--- @field public node GraphNode
+--- @field public shadowScale integer
+--- @field public shadowSolidity integer
+--- @field public shadowType integer
+
+--- @class GraphNodeStart
+--- @field public node GraphNode
+
+--- @class GraphNodeSwitchCase
+--- @field public fnNode FnGraphNode
+--- @field public numCases integer
+--- @field public selectedCase integer
+--- @field public unused integer
+
+--- @class GraphNodeTranslation
+--- @field public node GraphNode
+--- @field public pad1E Array_integer
+--- @field public translation Vec3s
+
+--- @class GraphNodeTranslationRotation
+--- @field public node GraphNode
+--- @field public rotation Vec3s
+--- @field public translation Vec3s
 
 --- @class GraphNode_802A45E4
 --- @field public unk18 integer
@@ -852,6 +1006,9 @@
 --- @field public curFocus Vec3f
 --- @field public curPos Vec3f
 --- @field public defMode integer
+--- @field public filler30 Array_integer
+--- @field public filler3E Array_integer
+--- @field public filler72 Array_integer
 --- @field public focHSpeed number
 --- @field public focVSpeed number
 --- @field public focus Vec3f
@@ -947,6 +1104,7 @@
 
 --- @class MarioAnimation
 --- @field public currentAnimAddr Pointer_integer
+--- @field public padding Array_integer
 --- @field public targetAnim Animation
 
 --- @class MarioBodyState
@@ -955,6 +1113,7 @@
 --- @field public capState integer
 --- @field public eyeState integer
 --- @field public grabPos integer
+--- @field public handFootPos Array_Vec3f
 --- @field public handState integer
 --- @field public headAngle Vec3s
 --- @field public headPos Vec3f
@@ -965,6 +1124,7 @@
 --- @field public lightingDirX number
 --- @field public lightingDirY number
 --- @field public lightingDirZ number
+--- @field public mirrorMario boolean
 --- @field public modelState integer
 --- @field public punchState integer
 --- @field public shadeB integer
@@ -972,6 +1132,7 @@
 --- @field public shadeR integer
 --- @field public torsoAngle Vec3s
 --- @field public torsoPos Vec3f
+--- @field public updateHeadPosTime integer
 --- @field public updateTorsoTime integer
 --- @field public wingFlutter integer
 
@@ -1059,9 +1220,11 @@
 
 --- @class Mod
 --- @field public basePath string
+--- @field public category string
 --- @field public customBehaviorIndex integer
 --- @field public description string
 --- @field public enabled boolean
+--- @field public fileCapacity integer
 --- @field public fileCount integer
 --- @field public ignoreScriptWarnings boolean
 --- @field public incompatible string
@@ -1086,6 +1249,7 @@
 
 --- @class ModFile
 --- @field public cachedPath string
+--- @field public dataHash Array_integer
 --- @field public relativePath string
 --- @field public wroteBytes integer
 
@@ -1125,6 +1289,7 @@
 --- @field public modelIndex integer
 --- @field public name string
 --- @field public onRxSeqId integer
+--- @field public overrideLocation string
 --- @field public overrideModelIndex integer
 --- @field public overridePalette PlayerPalette
 --- @field public overridePaletteIndex integer
@@ -1144,6 +1309,7 @@
 --- @field public bhvDelayTimer integer
 --- @field public bhvStackIndex integer
 --- @field public collidedObjInteractTypes integer
+--- @field public collidedObjs Array_Object
 --- @field public collisionData Pointer_Collision
 --- @field public coopFlags integer
 --- @field public ctx integer
@@ -1958,6 +2124,8 @@
 --- @field public yaw number
 
 --- @class PaintingMeshVertex
+--- @field public norm Array_integer
+--- @field public pos Array_integer
 
 --- @class PaintingValues
 --- @field public bob_painting Painting
@@ -2024,6 +2192,7 @@
 --- @field public pauseAnywhere integer
 --- @field public playerInteractions PlayerInteractions
 --- @field public playerKnockbackStrength integer
+--- @field public pvpType PvpType
 --- @field public skipIntro integer
 --- @field public stayInLevelAfterStar integer
 
@@ -2133,6 +2302,10 @@
 --- @field public posPitch integer
 --- @field public posYaw integer
 
+--- @class Vtx_Interp
+--- @field public n string
+--- @field public ob Array_number
+
 --- @class WallCollisionData
 --- @field public normalAddition Vec3f
 --- @field public normalCount integer
@@ -2140,6 +2313,7 @@
 --- @field public offsetY number
 --- @field public radius number
 --- @field public unused integer
+--- @field public walls Array_Surface
 --- @field public x number
 --- @field public y number
 --- @field public z number
@@ -2194,20 +2368,54 @@
 --- @field public unk00 integer
 --- @field public unk02 integer
 
+--- @class Vec2f
+--- @field public x number
+--- @field public y number
+
 --- @class Vec3f
 --- @field public x number
 --- @field public y number
 --- @field public z number
+
+--- @class Vec4f
+--- @field public x number
+--- @field public y number
+--- @field public z number
+--- @field public w number
 
 --- @class Vec3s
 --- @field public x integer
 --- @field public y integer
 --- @field public z integer
 
+--- @class Vec4s
+--- @field public x integer
+--- @field public y integer
+--- @field public z integer
+--- @field public w integer
+
+--- @class Mat4
+--- @field public m00 number
+--- @field public m01 number
+--- @field public m02 number
+--- @field public m03 number
+--- @field public m10 number
+--- @field public m11 number
+--- @field public m12 number
+--- @field public m13 number
+--- @field public m20 number
+--- @field public m21 number
+--- @field public m22 number
+--- @field public m23 number
+--- @field public m30 number
+--- @field public m31 number
+--- @field public m32 number
+--- @field public m33 number
+
 --- @class Color
---- @field public b integer
---- @field public g integer
 --- @field public r integer
+--- @field public g integer
+--- @field public b integer
 
 --- @class Pointer_integer
 --- @class Pointer_Trajectory

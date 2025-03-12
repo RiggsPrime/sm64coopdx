@@ -45,14 +45,17 @@ in_files = [
     "src/pc/mods/mod_storage.h",
     "src/game/first_person_cam.h",
     "src/pc/djui/djui_console.h",
-    "src/game/player_palette.h"
+    "src/game/player_palette.h",
+    "src/pc/network/lag_compensation.h",
+    "src/pc/djui/djui_panel_menu.h"
 ]
 
 exclude_constants = {
     "*": [ "^MAXCONTROLLERS$", "^AREA_[^T].*", "^AREA_T[HTO]", "^CONT_ERR.*", "^READ_MASK$", "^SIGN_RANGE$", ],
     "src/game/obj_behaviors.c": [ "^o$" ],
     "src/pc/djui/djui_console.h": [ "CONSOLE_MAX_TMP_BUFFER" ],
-    "src/pc/lua/smlua_hooks.h": [ "MAX_HOOKED_MOD_MENU_ELEMENTS" ]
+    "src/pc/lua/smlua_hooks.h": [ "MAX_HOOKED_MOD_MENU_ELEMENTS" ],
+    "src/pc/djui/djui_panel_menu.h": [ "RAINBOW_TEXT_LEN" ]
 }
 
 include_constants = {
@@ -70,6 +73,9 @@ pretend_find = [
 seen_constants = []
 totalConstants = 0
 verbose = len(sys.argv) > 1 and (sys.argv[1] == "-v" or sys.argv[1] == "--verbose")
+overrideConstant = {
+    'VERSION_REGION': '"US"',
+}
 
 ############################################################################
 
@@ -109,6 +115,9 @@ def allowed_identifier(filename, ident):
         for include in include_constants[filename]:
             if re.search(include, ident) != None:
                 return True
+        return False
+    
+    if ident in overrideConstant:
         return False
 
     return True
@@ -215,6 +224,8 @@ def process_files():
     files = sorted(in_files, key=lambda d: d.split('/')[-1])
     for f in files:
         processed_files.append(process_file(f))
+    for key, item in overrideConstant.items():
+        processed_files[0]['constants'].append([key, item])
     return processed_files
 
 ############################################################################

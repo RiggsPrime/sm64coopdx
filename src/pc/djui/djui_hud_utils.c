@@ -137,14 +137,14 @@ void patch_djui_hud(f32 delta) {
         // rotate
         f32 translatedW = scaleW;
         f32 translatedH = scaleH;
-        s32 rotation = delta_interpolate_s32(sRotation.rotation - sRotation.rotationDiff, sRotation.rotation, delta);
-        f32 pivotX = delta_interpolate_f32(sRotation.prevPivotX, sRotation.pivotX, delta);
-        f32 pivotY = delta_interpolate_f32(sRotation.prevPivotY, sRotation.pivotY, delta);
         djui_hud_size_translate(&translatedW);
         djui_hud_size_translate(&translatedH);
         if (sRotation.rotationDiff != 0 || sRotation.rotation != 0) {
-            f32 pivotTranslationX = translatedW * pivotX;
-            f32 pivotTranslationY = translatedH * pivotY;
+            s32 rotation = delta_interpolate_s32(sRotation.rotation - sRotation.rotationDiff, sRotation.rotation, delta);
+            f32 pivotX = delta_interpolate_f32(sRotation.prevPivotX, sRotation.pivotX, delta);
+            f32 pivotY = delta_interpolate_f32(sRotation.prevPivotY, sRotation.pivotY, delta);
+            f32 pivotTranslationX = interp->width * translatedW * pivotX;
+            f32 pivotTranslationY = interp->height * translatedH * pivotY;
             create_dl_translation_matrix(DJUI_MTX_NOPUSH, +pivotTranslationX, -pivotTranslationY, 0);
             create_dl_rotation_matrix(DJUI_MTX_NOPUSH, rotation, 0, 0, 1);
             create_dl_translation_matrix(DJUI_MTX_NOPUSH, -pivotTranslationX, +pivotTranslationY, 0);
@@ -234,7 +234,8 @@ void djui_hud_set_rotation(s16 rotation, f32 pivotX, f32 pivotY) {
 }
 
 void djui_hud_set_rotation_interpolated(s32 prevRotation, f32 prevPivotX, f32 prevPivotY, s32 rotation, f32 pivotX, f32 pivotY) {
-    sRotation.rotationDiff = ((rotation - prevRotation) * 180.f) / 0x8000;
+    f32 normalizedDiff = ((rotation - prevRotation + 0x8000) & 0xFFFF) - 0x8000; // Fix modular overflow/underflow
+    sRotation.rotationDiff = (normalizedDiff * 180.f) / 0x8000;
     sRotation.prevPivotX = prevPivotX;
     sRotation.prevPivotY = prevPivotY;
     sRotation.rotation = (rotation * 180.f) / 0x8000;
@@ -487,7 +488,7 @@ void djui_hud_render_texture_tile_raw(const u8* texture, u32 bitSize, u32 width,
     create_dl_scale_matrix(DJUI_MTX_NOPUSH, width * translatedW, height * translatedH, 1.0f);
 
     // render
-    djui_gfx_render_texture_tile(texture, width, height, bitSize, tileX, tileY, tileW, tileH, sFilter);
+    djui_gfx_render_texture_tile(texture, width, height, bitSize, tileX, tileY, tileW, tileH, sFilter, false);
 
     // pop
     gSPPopMatrix(gDisplayListHead++, G_MTX_MODELVIEW);
@@ -614,6 +615,19 @@ static void hud_rotate_and_translate_vec3f(Vec3f vec, Mat4* mtx, Vec3f out) {
     out[2] += (*mtx)[3][2];
 }
 
+f32 get_current_fov() {
+    return get_first_person_enabled() ? gFirstPersonCamera.fov : not_zero(gFOVState.fov, gOverrideFOV) + gFOVState.fovOffset;
+}
+
+f32 djui_hud_get_fov_coeff() {
+    // fov of 45.0 is the default fov
+    f32 fov = get_current_fov();
+    f32 fovDefault = tanf(45.f * ((f32)M_PI / 360.0f));
+    f32 fovCurrent = tanf(fov * ((f32)M_PI / 360.0f));
+
+    return (fovDefault / fovCurrent) * 1.13f;
+}
+
 bool djui_hud_world_pos_to_screen_pos(Vec3f pos, Vec3f out) {
     if (!gCamera) { return false; }
     hud_rotate_and_translate_vec3f(pos, &gCamera->mtx, out);
@@ -624,18 +638,43 @@ bool djui_hud_world_pos_to_screen_pos(Vec3f pos, Vec3f out) {
     out[0] *= 256.0f / -out[2];
     out[1] *= 256.0f / out[2];
 
-    // fov of 45.0 is the default fov
-    f32 fov = get_first_person_enabled() ? gFirstPersonCamera.fov : not_zero(45.0f, gOverrideFOV);
-    f32 fovDefault = tanf(fov * ((f32)M_PI / 360.0f));
-    f32 fovCurrent = tanf((fov + gFOVState.fovOffset) * ((f32)M_PI / 360.0f));
+    f32 fovCoeff = djui_hud_get_fov_coeff();
 
-    f32 fovDifference = (fovDefault / fovCurrent) * 1.13f;
+    out[0] *= fovCoeff;
+    out[1] *= fovCoeff;
 
-    out[0] *= fovDifference;
-    out[1] *= fovDifference;
+    f32 screenWidth, screenHeight;
+    if (sResolution == RESOLUTION_N64) {
+        screenWidth = GFX_DIMENSIONS_ASPECT_RATIO * SCREEN_HEIGHT;
+        screenHeight = SCREEN_HEIGHT;
+    } else {
+        u32 windowWidth, windowHeight;
+        WAPI.get_dimensions(&windowWidth, &windowHeight);
+        screenWidth = (f32) windowWidth;
+        screenHeight = (f32) windowHeight;
+    }
 
-    out[0] += djui_hud_get_screen_width()  / 2.0f;
-    out[1] += djui_hud_get_screen_height() / 2.0f;
+    out[0] += screenWidth  / 2.0f;
+    out[1] += screenHeight / 2.0f;
+
+    extern Vp *D_8032CE74;
+    if (D_8032CE74) {
+        Vp_t *viewport = &D_8032CE74->vp;
+        f32 width  = viewport->vscale[0] / 2.0f;
+        f32 height = viewport->vscale[1] / 2.0f;
+        f32 x = (viewport->vtrans[0] / 4.0f) - width / 2.0f;
+        f32 y = SCREEN_HEIGHT - ((viewport->vtrans[1] / 4.0f) + height / 2.0f);
+
+        f32 xDiff = screenWidth / SCREEN_WIDTH;
+        f32 yDiff = screenHeight / SCREEN_HEIGHT;
+        width *= xDiff;
+        height *= yDiff;
+        x = x * xDiff - 1;
+        y = (screenHeight - y * yDiff) - height;
+
+        out[0] = x + (out[0] * (width / screenWidth));
+        out[1] = y + (out[1] * (height / screenHeight));
+    }
 
     return true;
 }

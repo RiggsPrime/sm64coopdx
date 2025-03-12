@@ -17,6 +17,8 @@
     - [enum DjuiFontType](#enum-DjuiFontType)
     - [enum HudUtilsFilter](#enum-HudUtilsFilter)
     - [enum HudUtilsResolution](#enum-HudUtilsResolution)
+- [djui_panel_menu.h](#djui_panel_menuh)
+    - [enum DjuiRainbowColor](#enum-DjuiRainbowColor)
 - [envfx_snow.h](#envfx_snowh)
 - [external.h](#externalh)
     - [enum DialogSound](#enum-DialogSound)
@@ -27,11 +29,13 @@
 - [interaction.h](#interactionh)
     - [enum InteractionFlag](#enum-InteractionFlag)
     - [enum InteractionType](#enum-InteractionType)
+- [lag_compensation.h](#lag_compensationh)
 - [level_commands.h](#level_commandsh)
 - [level_defines.h](#level_definesh)
     - [enum LevelNum](#enum-LevelNum)
 - [level_update.h](#level_updateh)
     - [enum HUDDisplayFlag](#enum-HUDDisplayFlag)
+    - [enum MarioSpawnType](#enum-MarioSpawnType)
 - [mario_animation_ids.h](#mario_animation_idsh)
     - [enum CharacterAnimID](#enum-CharacterAnimID)
     - [enum MarioAnimID](#enum-MarioAnimID)
@@ -45,6 +49,7 @@
     - [enum BouncyLevelBounds](#enum-BouncyLevelBounds)
     - [enum NetworkSystemType](#enum-NetworkSystemType)
     - [enum PlayerInteractions](#enum-PlayerInteractions)
+    - [enum PvpType](#enum-PvpType)
 - [network_player.h](#network_playerh)
     - [enum NetworkPlayerType](#enum-NetworkPlayerType)
 - [obj_behaviors.c](#obj_behaviorsc)
@@ -82,6 +87,7 @@
 - INSTANT_WARP_INDEX_START
 - INSTANT_WARP_INDEX_STOP
 - MAX_AREAS
+- VERSION_REGION
 - WARP_TRANSITION_FADE_FROM_BOWSER
 - WARP_TRANSITION_FADE_FROM_CIRCLE
 - WARP_TRANSITION_FADE_FROM_COLOR
@@ -1110,7 +1116,8 @@
 | FONT_ALIASED | 3 |
 | FONT_CUSTOM_HUD | 4 |
 | FONT_RECOLOR_HUD | 5 |
-| FONT_COUNT | 6 |
+| FONT_SPECIAL | 6 |
+| FONT_COUNT | 7 |
 
 ### [enum HudUtilsFilter](#HudUtilsFilter)
 | Identifier | Value |
@@ -1125,6 +1132,20 @@
 | RESOLUTION_DJUI | 0 |
 | RESOLUTION_N64 | 1 |
 | RESOLUTION_COUNT | 2 |
+
+[:arrow_up_small:](#)
+
+<br />
+
+## [djui_panel_menu.h](#djui_panel_menu.h)
+
+### [enum DjuiRainbowColor](#DjuiRainbowColor)
+| Identifier | Value |
+| :--------- | :---- |
+| DJUI_RAINBOW_COLOR_RED | 0 |
+| DJUI_RAINBOW_COLOR_GREEN | 1 |
+| DJUI_RAINBOW_COLOR_BLUE | 2 |
+| DJUI_RAINBOW_COLOR_YELLOW | 3 |
 
 [:arrow_up_small:](#)
 
@@ -1295,6 +1316,9 @@
 - INT_SUBTYPE_SIGN
 - INT_SUBTYPE_STAR_DOOR
 - INT_SUBTYPE_TWIRL_BOUNCE
+- PVP_ATTACK_KNOCKBACK_TIMER_DEFAULT
+- PVP_ATTACK_KNOCKBACK_TIMER_OVERRIDE
+- PVP_ATTACK_OVERRIDE_VANILLA_INVINCIBILITY
 
 ### [enum InteractionFlag](#InteractionFlag)
 | Identifier | Value |
@@ -1309,6 +1333,7 @@
 | INT_HIT_FROM_BELOW | (1 << 7) |
 | INT_TWIRL | (1 << 8) |
 | INT_GROUND_POUND_OR_TWIRL | (INT_GROUND_POUND | INT_TWIRL) |
+| INT_LUA | (1 << 31) |
 
 ### [enum InteractionType](#InteractionType)
 | Identifier | Value |
@@ -1345,6 +1370,13 @@
 | INTERACT_SHOCK | (1 << 29) |
 | INTERACT_IGLOO_BARRIER | (1 << 30) |
 | INTERACT_PLAYER | (1 << 31) |
+
+[:arrow_up_small:](#)
+
+<br />
+
+## [lag_compensation.h](#lag_compensation.h)
+- MAX_LOCAL_STATE_HISTORY
 
 [:arrow_up_small:](#)
 
@@ -1409,22 +1441,6 @@
 <br />
 
 ## [level_update.h](#level_update.h)
-- MARIO_SPAWN_AIRBORNE
-- MARIO_SPAWN_AIRBORNE_DEATH
-- MARIO_SPAWN_AIRBORNE_STAR_COLLECT
-- MARIO_SPAWN_DEATH
-- MARIO_SPAWN_DOOR_WARP
-- MARIO_SPAWN_FLYING
-- MARIO_SPAWN_HARD_AIR_KNOCKBACK
-- MARIO_SPAWN_INSTANT_ACTIVE
-- MARIO_SPAWN_LAUNCH_DEATH
-- MARIO_SPAWN_LAUNCH_STAR_COLLECT
-- MARIO_SPAWN_PAINTING_DEATH
-- MARIO_SPAWN_PAINTING_STAR_COLLECT
-- MARIO_SPAWN_SPIN_AIRBORNE
-- MARIO_SPAWN_SPIN_AIRBORNE_CIRCLE
-- MARIO_SPAWN_SWIMMING
-- MARIO_SPAWN_TELEPORT
 - MARIO_SPAWN_UNKNOWN_02
 - MARIO_SPAWN_UNKNOWN_03
 - MARIO_SPAWN_UNKNOWN_27
@@ -1487,6 +1503,31 @@
 | HUD_DISPLAY_FLAG_EMPHASIZE_POWER | 0x8000 |
 | HUD_DISPLAY_NONE | 0x0000 |
 | HUD_DISPLAY_DEFAULT | HUD_DISPLAY_FLAG_LIVES | HUD_DISPLAY_FLAG_COIN_COUNT | HUD_DISPLAY_FLAG_STAR_COUNT | HUD_DISPLAY_FLAG_CAMERA_AND_POWER | HUD_DISPLAY_FLAG_CAMERA | HUD_DISPLAY_FLAG_POWER | HUD_DISPLAY_FLAG_KEYS | HUD_DISPLAY_FLAG_UNKNOWN_0020 |
+
+### [enum MarioSpawnType](#MarioSpawnType)
+| Identifier | Value |
+| :--------- | :---- |
+| MARIO_SPAWN_NONE | 0 |
+| MARIO_SPAWN_DOOR_WARP | 1 |
+| MARIO_SPAWN_IDLE | 2 |
+| MARIO_SPAWN_PIPE | 3 |
+| MARIO_SPAWN_TELEPORT | 4 |
+| MARIO_SPAWN_INSTANT_ACTIVE | 0x10 |
+| MARIO_SPAWN_SWIMMING | ((MARIO_SPAWN_INSTANT_ACTIVE ) + 1) |
+| MARIO_SPAWN_AIRBORNE | ((MARIO_SPAWN_INSTANT_ACTIVE ) + 2) |
+| MARIO_SPAWN_HARD_AIR_KNOCKBACK | ((MARIO_SPAWN_INSTANT_ACTIVE ) + 3) |
+| MARIO_SPAWN_SPIN_AIRBORNE_CIRCLE | ((MARIO_SPAWN_INSTANT_ACTIVE ) + 4) |
+| MARIO_SPAWN_DEATH | ((MARIO_SPAWN_INSTANT_ACTIVE ) + 5) |
+| MARIO_SPAWN_SPIN_AIRBORNE | ((MARIO_SPAWN_INSTANT_ACTIVE ) + 6) |
+| MARIO_SPAWN_FLYING | ((MARIO_SPAWN_INSTANT_ACTIVE ) + 7) |
+| MARIO_SPAWN_PAINTING_STAR_COLLECT | 0x20 |
+| MARIO_SPAWN_PAINTING_DEATH | ((MARIO_SPAWN_PAINTING_STAR_COLLECT ) + 1) |
+| MARIO_SPAWN_AIRBORNE_STAR_COLLECT | ((MARIO_SPAWN_PAINTING_STAR_COLLECT ) + 2) |
+| MARIO_SPAWN_AIRBORNE_DEATH | ((MARIO_SPAWN_PAINTING_STAR_COLLECT ) + 3) |
+| MARIO_SPAWN_LAUNCH_STAR_COLLECT | ((MARIO_SPAWN_PAINTING_STAR_COLLECT ) + 4) |
+| MARIO_SPAWN_LAUNCH_DEATH | ((MARIO_SPAWN_PAINTING_STAR_COLLECT ) + 5) |
+| MARIO_SPAWN_UNUSED_38 | ((MARIO_SPAWN_PAINTING_STAR_COLLECT ) + 6) |
+| MARIO_SPAWN_FADE_FROM_BLACK | ((MARIO_SPAWN_PAINTING_STAR_COLLECT ) + 7) |
 
 [:arrow_up_small:](#)
 
@@ -2004,6 +2045,12 @@
 | PLAYER_INTERACTIONS_NONE | 0 |
 | PLAYER_INTERACTIONS_SOLID | 1 |
 | PLAYER_INTERACTIONS_PVP | 2 |
+
+### [enum PvpType](#PvpType)
+| Identifier | Value |
+| :--------- | :---- |
+| PLAYER_PVP_CLASSIC | 0 |
+| PLAYER_PVP_REVAMPED | 1 |
 
 [:arrow_up_small:](#)
 
@@ -3297,7 +3344,14 @@
 | HOOK_ON_ATTACK_OBJECT | 43 |
 | HOOK_ON_LANGUAGE_CHANGED | 44 |
 | HOOK_ON_MODS_LOADED | 45 |
-| HOOK_MAX | 46 |
+| HOOK_ON_NAMETAGS_RENDER | 46 |
+| HOOK_ON_DJUI_THEME_CHANGED | 47 |
+| HOOK_ON_GEO_PROCESS | 48 |
+| HOOK_BEFORE_GEO_PROCESS | 49 |
+| HOOK_ON_GEO_PROCESS_CHILDREN | 50 |
+| HOOK_MARIO_OVERRIDE_GEOMETRY_INPUTS | 51 |
+| HOOK_ON_INTERACTIONS | 52 |
+| HOOK_MAX | 53 |
 
 ### [enum LuaModMenuElementType](#LuaModMenuElementType)
 | Identifier | Value |
@@ -4465,10 +4519,6 @@
 - MINOR_VERSION_NUMBER
 - SM64COOPDX_VERSION
 - VERSION_NUMBER
-- VERSION_REGION
-- VERSION_REGION
-- VERSION_REGION
-- VERSION_REGION
 - VERSION_TEXT
 
 [:arrow_up_small:](#)

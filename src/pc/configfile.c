@@ -148,7 +148,7 @@ char         configPlayerName[MAX_CONFIG_STRING]  = "";
 unsigned int configPlayerModel                    = 0;
 struct PlayerPalette configPlayerPalette          = { { { 0x00, 0x00, 0xff }, { 0xff, 0x00, 0x00 }, { 0xff, 0xff, 0xff }, { 0x72, 0x1c, 0x0e }, { 0x73, 0x06, 0x00 }, { 0xfe, 0xc1, 0x79 }, { 0xff, 0x00, 0x00 }, { 0xff, 0x00, 0x00 } } };
 // coop settings
-unsigned int configAmountofPlayers                = MAX_PLAYERS;
+unsigned int configAmountOfPlayers                = MAX_PLAYERS;
 bool         configBubbleDeath                    = true;
 unsigned int configHostPort                       = DEFAULT_PORT;
 unsigned int configHostSaveSlot                   = 1;
@@ -170,6 +170,7 @@ bool         configMenuDemos                      = false;
 bool         configDisablePopups                  = false;
 char         configLanguage[MAX_CONFIG_STRING]    = "";
 bool         configDynosLocalPlayerModelOnly      = false;
+unsigned int configPvpType                        = PLAYER_PVP_CLASSIC;
 // CoopNet settings
 char         configCoopNetIp[MAX_CONFIG_STRING]   = DEFAULT_COOPNET_IP;
 unsigned int configCoopNetPort                    = DEFAULT_COOPNET_PORT;
@@ -186,6 +187,10 @@ unsigned int configDjuiThemeFont                  = FONT_NORMAL;
 unsigned int configDjuiScale                      = 0;
 // other
 unsigned int configRulesVersion                   = 0;
+bool         configCompressOnStartup              = false;
+
+// secrets
+bool configExCoopTheme = false;
 
 static const struct ConfigOption options[] = {
     // window settings
@@ -278,7 +283,7 @@ static const struct ConfigOption options[] = {
     {.name = "coop_player_palette_cap",        .type = CONFIG_TYPE_COLOR,  .colorValue  = &configPlayerPalette.parts[CAP]},
     {.name = "coop_player_palette_emblem",     .type = CONFIG_TYPE_COLOR,  .colorValue  = &configPlayerPalette.parts[EMBLEM]},
     // coop settings
-    {.name = "amount_of_players",              .type = CONFIG_TYPE_UINT,   .uintValue   = &configAmountofPlayers},
+    {.name = "amount_of_players",              .type = CONFIG_TYPE_UINT,   .uintValue   = &configAmountOfPlayers},
     {.name = "bubble_death",                   .type = CONFIG_TYPE_BOOL,   .boolValue   = &configBubbleDeath},
     {.name = "coop_host_port",                 .type = CONFIG_TYPE_UINT,   .uintValue   = &configHostPort},
     {.name = "coop_host_save_slot",            .type = CONFIG_TYPE_UINT,   .uintValue   = &configHostSaveSlot},
@@ -296,6 +301,7 @@ static const struct ConfigOption options[] = {
     {.name = "coop_menu_level",                .type = CONFIG_TYPE_UINT,   .uintValue   = &configMenuLevel},
     {.name = "coop_menu_sound",                .type = CONFIG_TYPE_UINT,   .uintValue   = &configMenuSound},
     {.name = "coop_menu_random",               .type = CONFIG_TYPE_BOOL,   .boolValue   = &configMenuRandom},
+    {.name = "player_pvp_mode",                .type = CONFIG_TYPE_UINT,   .uintValue   = &configPvpType},
     // {.name = "coop_menu_demos",                .type = CONFIG_TYPE_BOOL,   .boolValue   = &configMenuDemos},
     {.name = "disable_popups",                 .type = CONFIG_TYPE_BOOL,   .boolValue   = &configDisablePopups},
     {.name = "language",                       .type = CONFIG_TYPE_STRING, .stringValue = (char*)&configLanguage, .maxStringLength = MAX_CONFIG_STRING},
@@ -311,7 +317,27 @@ static const struct ConfigOption options[] = {
     {.name = "djui_theme_font",                .type = CONFIG_TYPE_UINT,   .uintValue   = &configDjuiThemeFont},
     {.name = "djui_scale",                     .type = CONFIG_TYPE_UINT,   .uintValue   = &configDjuiScale},
     // other
-    {.name = "rules_version",                  .type = CONFIG_TYPE_UINT,   .uintValue   = &configRulesVersion}
+    {.name = "rules_version",                  .type = CONFIG_TYPE_UINT,   .uintValue   = &configRulesVersion},
+    {.name = "compress_on_startup",            .type = CONFIG_TYPE_BOOL,   .boolValue   = &configCompressOnStartup},
+};
+
+struct SecretConfigOption {
+    const char *name;
+    enum ConfigOptionType type;
+    union {
+        bool *boolValue;
+        unsigned int *uintValue;
+        float* floatValue;
+        char* stringValue;
+        u64* u64Value;
+        u8 (*colorValue)[3];
+    };
+    int maxStringLength;
+    bool inConfig;
+};
+
+static struct SecretConfigOption secret_options[] = {
+    {.name = "ex_coop_theme", .type = CONFIG_TYPE_BOOL, .boolValue = &configExCoopTheme},
 };
 
 // FunctionConfigOption functions
@@ -334,6 +360,8 @@ void enable_queued_mods(void) {
 }
 
 static void enable_mod_read(char** tokens, UNUSED int numTokens) {
+    if (gCLIOpts.disableMods) { return; }
+
     char combined[256] = { 0 };
     for (int i = 1; i < numTokens; i++) {
         if (i != 1) { strncat(combined, " ", 255); }
@@ -342,6 +370,19 @@ static void enable_mod_read(char** tokens, UNUSED int numTokens) {
 
     struct QueuedFile* queued = malloc(sizeof(struct QueuedFile));
     queued->path = strdup(combined);
+    queued->next = NULL;
+    if (!sQueuedEnableModsHead) {
+        sQueuedEnableModsHead = queued;
+    } else {
+        struct QueuedFile* tail = sQueuedEnableModsHead;
+        while (tail->next) { tail = tail->next; }
+        tail->next = queued;
+    }
+}
+
+static void enable_mod(char* mod) {
+    struct QueuedFile* queued = malloc(sizeof(struct QueuedFile));
+    queued->path = mod;
     queued->next = NULL;
     if (!sQueuedEnableModsHead) {
         sQueuedEnableModsHead = queued;
@@ -619,6 +660,15 @@ static void configfile_load_internal(const char *filename, bool* error) {
                     }
                 }
 
+                // secret options
+                for (unsigned int i = 0; i < ARRAY_LEN(secret_options); i++) {
+                    if (strcmp(tokens[0], secret_options[i].name) == 0) {
+                        secret_options[i].inConfig = true;
+                        option = (const struct ConfigOption *) &secret_options[i];
+                        break;
+                    }
+                }
+
                 if (option == NULL) {
 #ifdef DEVELOPMENT
                     printf("unknown option '%s'\n", tokens[0]);
@@ -689,6 +739,25 @@ NEXT_OPTION:
     if (configDjuiTheme >= DJUI_THEME_MAX) { configDjuiTheme = 0; }
     if (configDjuiScale >= 5) { configDjuiScale = 0; }
 
+    if (gCLIOpts.fullscreen == 1) {
+        configWindow.fullscreen = true;
+    } else if (gCLIOpts.fullscreen == 2) {
+        configWindow.fullscreen = false;
+    }
+    if (gCLIOpts.width != 0) { configWindow.w = gCLIOpts.width; }
+    if (gCLIOpts.height != 0) { configWindow.h = gCLIOpts.height; }
+
+    if (gCLIOpts.playerName[0]) { snprintf(configPlayerName, MAX_CONFIG_STRING, "%s", gCLIOpts.playerName); }
+
+    for (int i = 0; i < gCLIOpts.enabledModsCount; i++) {
+        enable_mod(gCLIOpts.enableMods[i]);
+    }
+    free(gCLIOpts.enableMods);
+
+    if (gCLIOpts.playerCount != 0) {
+        configAmountOfPlayers = MIN(gCLIOpts.playerCount, MAX_PLAYERS);
+    }
+
 #ifndef COOPNET
     configNetworkSystem = NS_SOCKET;
 #endif
@@ -708,6 +777,42 @@ void configfile_load(void) {
 #endif
 }
 
+static void configfile_save_option(FILE *file, const struct ConfigOption *option, bool isSecret) {
+    if (isSecret) {
+        const struct SecretConfigOption *secret_option = (const struct SecretConfigOption *) option;
+        if (!secret_option->inConfig) { return; }
+    }
+    switch (option->type) {
+        case CONFIG_TYPE_BOOL:
+            fprintf(file, "%s %s\n", option->name, *option->boolValue ? "true" : "false");
+            break;
+        case CONFIG_TYPE_UINT:
+            fprintf(file, "%s %u\n", option->name, *option->uintValue);
+            break;
+        case CONFIG_TYPE_FLOAT:
+            fprintf(file, "%s %f\n", option->name, *option->floatValue);
+            break;
+        case CONFIG_TYPE_BIND:
+            fprintf(file, "%s ", option->name);
+            for (int i = 0; i < MAX_BINDS; ++i)
+                fprintf(file, "%04x ", option->uintValue[i]);
+            fprintf(file, "\n");
+            break;
+        case CONFIG_TYPE_STRING:
+            fprintf(file, "%s %s\n", option->name, option->stringValue);
+            break;
+        case CONFIG_TYPE_U64:
+            fprintf(file, "%s %llu\n", option->name, *option->u64Value);
+            break;
+        case CONFIG_TYPE_COLOR:
+            fprintf(file, "%s %02x %02x %02x\n", option->name, (*option->colorValue)[0], (*option->colorValue)[1], (*option->colorValue)[2]);
+            break;
+        default:
+            LOG_ERROR("Configfile wrote bad type '%d': %s", (int)option->type, option->name);
+            break;
+    }
+}
+
 // Writes the config file to 'filename'
 void configfile_save(const char *filename) {
     FILE *file;
@@ -722,36 +827,12 @@ void configfile_save(const char *filename) {
 
     for (unsigned int i = 0; i < ARRAY_LEN(options); i++) {
         const struct ConfigOption *option = &options[i];
+        configfile_save_option(file, option, false);
+    }
 
-        switch (option->type) {
-            case CONFIG_TYPE_BOOL:
-                fprintf(file, "%s %s\n", option->name, *option->boolValue ? "true" : "false");
-                break;
-            case CONFIG_TYPE_UINT:
-                fprintf(file, "%s %u\n", option->name, *option->uintValue);
-                break;
-            case CONFIG_TYPE_FLOAT:
-                fprintf(file, "%s %f\n", option->name, *option->floatValue);
-                break;
-            case CONFIG_TYPE_BIND:
-                fprintf(file, "%s ", option->name);
-                for (int i = 0; i < MAX_BINDS; ++i)
-                    fprintf(file, "%04x ", option->uintValue[i]);
-                fprintf(file, "\n");
-                break;
-            case CONFIG_TYPE_STRING:
-                fprintf(file, "%s %s\n", option->name, option->stringValue);
-                break;
-            case CONFIG_TYPE_U64:
-                fprintf(file, "%s %llu\n", option->name, *option->u64Value);
-                break;
-            case CONFIG_TYPE_COLOR:
-                fprintf(file, "%s %02x %02x %02x\n", option->name, (*option->colorValue)[0], (*option->colorValue)[1], (*option->colorValue)[2]);
-                break;
-            default:
-                LOG_ERROR("Configfile wrote bad type '%d': %s", (int)option->type, option->name);
-                break;
-        }
+    for (unsigned int i = 0; i < ARRAY_LEN(secret_options); i++) {
+        const struct ConfigOption *option = (const struct ConfigOption *) &secret_options[i];
+        configfile_save_option(file, option, true);
     }
 
     // save function options
